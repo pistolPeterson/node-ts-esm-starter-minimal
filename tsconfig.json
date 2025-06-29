@@ -9,6 +9,7 @@
     "esModuleInterop": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
 
     /* Import options: */
     "allowJs": true, //Allow import .js
