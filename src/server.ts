@@ -1,16 +1,18 @@
 import express, { Request, Response, NextFunction } from "express"
 import "dotenv/config"
-import { hello } from "@/constants/message.js"
+import { HEALTH_CHECK } from "./constants/constants.ts"
+import uploadRoutes from "./routes/uploadRoutes.ts"
 
+import cors from "cors"
 const app = express()
 const PORT = process.env.PORT || 3000
 
-app.get("/", (req, res, next) => {
-  try {
-    return res.send({ message: hello })
-  } catch (error) {
-    return next(error)
-  }
+app.use(cors())
+app.use(express.json())
+app.use("/api/upload", uploadRoutes)
+
+app.get("/api/health", (req, res, next) => {
+  return res.send({ message: HEALTH_CHECK })
 })
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
