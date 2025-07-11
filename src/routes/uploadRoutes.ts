@@ -6,6 +6,7 @@ import fs from "fs"
 // Import Multer types directly
 import type { File as MulterFile } from "multer"
 import { readAllFileNamesInDirectory } from "@/services/fileService.ts"
+import { convertBOFA, convertCHASE } from "@/services/csvConvertService.ts"
 
 // Extend Express Request type to include 'file' property from multer
 interface MulterRequest extends Request {
@@ -20,8 +21,8 @@ const storage = multer.diskStorage({
     cb(null, "uploadData/")
   },
   filename: function (req, file, cb) {
+    //  const bankName = req.bankType === "chase" ? "chase" : "bofa"
     const fileName = file.fieldname + Date.now() + "-" + file.originalname
-    console.log("Saving as:", fileName)
     cb(null, fileName)
   },
 })
@@ -30,29 +31,80 @@ router.post("/", upload.single("csvFile"), (req: MulterRequest, res) => {
   if (!req.file) {
     return res.status(400).send("No file uploaded.")
   }
-  console.log("File received:", req.file)
-
+  //console.log("File received:", req.file)
+  console.log(req.body)
   res.send("File uploaded successfully")
 })
-
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
+  const uploadPrefix = "uploadData/"
   const results: any[] = []
 
-  readAllFileNamesInDirectory("uploadData").then((files) => {
-    console.log("Files in uploadData directory:", files)
-  })
+  try {
+    const files = await readAllFileNamesInDirectory("uploadData")
+    const filePromises = (files as string[]).map((file) => {
+      return new Promise<void>((resolve, reject) => {
+        fs.createReadStream(`${uploadPrefix}${file}`)
+          .pipe(csv())
+          .on("data", (data) => {
+            //prevalidation
+            if (data.Amount === "" || data.Amount == undefined) {
+              console.log("this amount is empty bruv, aint no way")
+            } else {
+              if (file.includes("bofa")) {
+                const filteredBofa = convertBOFA(data)
+                results.push(filteredBofa)
+              } else if (file.includes("chase")) {
+                const filteredChase = convertCHASE(data)
+                results.push(filteredChase)
+              } else {
+                console.log(
+                  "This file did not have bofa or chase, we skipping it " + file
+                )
+              }
+            }
 
-  fs.createReadStream("uploadData/csvFile1752202105046-industry.csv")
-    .pipe(csv())
-    .on("data", (data) => results.push(data))
-    .on("end", () => {
-      console.log(results)
-      // [
-      //   { NAME: 'Daffy Duck', AGE: '24' },
-      //   { NAME: 'Bugs Bunny', AGE: '22' }
-      // ]
+            //results.push(data)
+          })
+          .on("end", () => resolve())
+          .on("error", reject)
+      })
     })
-  res.send("Upload endpoint is ready. Use POST to upload files.")
+
+    await Promise.all(filePromises)
+
+    res.send({
+      message: "Upload endpoint is ready. Use POST to upload files.",
+      theBody: results,
+    })
+  } catch (err) {
+    res.status(500).send({ error: "Failed to read files", details: err })
+  }
 })
+
+// router.get("/", (req, res) => {
+//   const results: any[] = []
+//   const uploadPrefix = "uploadData/"
+
+//   readAllFileNamesInDirectory("uploadData").then((files) => {
+//     console.log("Files in uploadData directory:", files)
+//     ;(files as string[]).forEach((file) => {
+//       fs.createReadStream(`${uploadPrefix}${file}`)
+//         .pipe(csv())
+//         .on("data", (data) => results.push(data))
+//         .on("end", () => {
+//           console.log("Showing the data in the file: ", results)
+//           // [
+//           //   { NAME: 'Daffy Duck', AGE: '24' },
+//           //   { NAME: 'Bugs Bunny', AGE: '22' }
+//           // ]
+//         })
+//     })
+//   })
+
+//   res.send({
+//     message: "Upload endpoint is ready. Use POST to upload files.",
+//     theBody: JSON.stringify(results),
+//   })
+// })
 
 export default router
