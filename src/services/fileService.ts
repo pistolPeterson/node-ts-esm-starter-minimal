@@ -18,3 +18,15 @@ export const readFileContent = (filePath, encoding = "utf8") => {
     })
   })
 }
+
+export const readAllFileNamesInDirectory = (dirPath) => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(dirPath, (err, files) => {
+      if (err) {
+        console.error(`Error reading directory at ${dirPath}:`, err)
+        return reject(new Error(`Failed to read directory: ${err.message}`))
+      }
+      resolve(files) // Return all file names
+    })
+  })
+}
