@@ -28,3 +28,8 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 app.listen(PORT, () => {
   console.log(`Server is listening on port ${PORT}`)
 })
+//Todo
+//test original csv data sets
+// begin planning out frontend
+//the frontend has to add a grid/form systme where i can give all the entries a category (hard code it for now, include child entries as well)
+// just the visualization part for now, get to a point where you can now visualize your data
